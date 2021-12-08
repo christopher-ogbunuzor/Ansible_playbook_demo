@@ -1,0 +1,5 @@
+---
+- hosts: webserver
+  tasks:
+    - name: This is my first task
+      setup:
