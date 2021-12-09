@@ -1,5 +1,15 @@
 ---
 - hosts: webserver
+  gather_facts: no
   tasks:
-    - name: This is my first task
-      setup:
+    - name: Creating my new folder
+      file:
+        path: "{{my_demo_folder_path}}"
+        state: directory
+        owner: ec2-user
+    - name: Creating a new file
+      file:
+        path: "{{my_demo_folder_path}}/new_file.txt" #you have to use underscores for variable 
+        state: touch
+
+      
