@@ -1,0 +1,14 @@
+groups:
+  - name: testers_group
+    members:
+      - bob
+
+  - name: developers_group
+    members:
+      - alice
+      - badshah
+
+user_groups:
+  bob: testers_group
+  alice: developers_group
+  badshah: developers_group

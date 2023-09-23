@@ -1,10 +1,10 @@
----
 - hosts: webserver
   gather_facts: no
   become: yes
 
   vars:
     default_users: ['nobody']
+    default_groups: ['nogroup']
     users_file: users.yml
 
   tasks:
@@ -16,10 +16,6 @@
       ansible.builtin.apt:
         name: python3
         state: present
-
-    # - name: Check python
-    #   raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
-    #   changed_when: false
 
     - name: Get list of all users
       shell: "getent passwd | awk -F: '$3 > 1000 {print $1}'"
@@ -33,18 +29,57 @@
         remove: yes
       with_items: "{{ users.stdout_lines }}"
       when: item not in default_users
+      notify: Remove groups with GID > 1000 excluding nogroup  # Notify the handler
 
     - name: Load users from users.yaml
       include_vars:
         file: "{{ users_file }}"
         name: users_data
-      # register: users_data
+
+    - name: Load groups from groups.yaml
+      include_vars:
+        file: groups.yml
+        name: groups_data
+
+    - name: Create groups from groups.yml
+      group:
+        name: "{{ item.name }}"
+        state: present
+      loop: "{{ groups_data.groups }}"
+      when: item.name not in default_groups
+
+    # - name: Add required users
+    #   user:
+    #     name: "{{ item.user }}"
+    #     state: present
+    #     groups: "{{ groups_data.groups | selectattr('name', 'in', item.groups) | map(attribute='name') | list }}"
+    #     shell: /bin/bash
+    #   loop: "{{ users_data.users }}"
+
+    # - name: Add required users
+    #   user:
+    #     name: "{{ item.user }}"
+    #     state: present
+    #     groups: "{{ groups_data.user_groups | selectattr('name', 'in', item.groups) | map(attribute='name') | list }}"
+    #     shell: /bin/bash
+    #   loop: "{{ users_data.users }}"
 
     - name: Add required users
       user:
         name: "{{ item.user }}"
         state: present
+        groups: "{{ groups_data.groups | selectattr('name', 'in', groups_data.user_groups[item.user]) | map(attribute='name') | list }}"
+        shell: /bin/bash
       loop: "{{ users_data.users }}"
+
+    # - name: Add required users
+    #   user:
+    #     name: "{{ item.user }}"
+    #     state: present
+    #     groups: "{{ item.groups }}"
+    #     shell: /bin/bash
+    #   loop: "{{ users_data.users }}"
+
 
     - name: Add SSH public keys
       authorized_key:
@@ -53,4 +88,16 @@
         key: "{{ item.public_key }}"
       loop: "{{ users_data.users }}"
 
+  handlers:
+    - name: Get list of all groups
+      command: "getent group | awk -F: '$3 > 1000 && $1 != \"nogroup\" {print $1}'"
+      changed_when: false
+      register: groups
 
+    - name: Remove groups with GID > 1000 excluding nogroup
+      command: "groupdel {{ item.split(':')[0] }}"
+      loop: "{{ groups.stdout_lines }}"
+      when: item.split(':')[2] | int > 1000
+
+
+  
