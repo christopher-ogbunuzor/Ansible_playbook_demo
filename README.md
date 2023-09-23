@@ -15,7 +15,7 @@ You can add as many users and their corresponding public key as you want in the 
 ## Commands
 This repo does not include a github `workflow` file, so you should have ansible installed on your local machine/laptop and run the commands below
 
-1. modify the `inventory.hosts` file with the correct `ansible_user` and `ansible_ssh_private_key_file`
+1. Modify the `inventory.hosts` file with the correct `ansible_user` and `ansible_ssh_private_key_file`
 
 2. Replace public keys and user names in `users.yml`
 
@@ -25,3 +25,6 @@ This repo does not include a github `workflow` file, so you should have ansible 
 ```
 ansible-playbook ssh_playbook.yml
 ```
+
+## Further Reading
+See [here](https://medium.com/@chandrapal/managing-linux-users-ssh-keys-using-ansible-39ee2fc24c16)
