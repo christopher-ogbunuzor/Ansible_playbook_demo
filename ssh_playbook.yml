@@ -1,0 +1,56 @@
+---
+- hosts: webserver
+  gather_facts: no
+  become: yes
+
+  vars:
+    default_users: ['nobody']
+    users_file: users.yml
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Install Python 3
+      ansible.builtin.apt:
+        name: python3
+        state: present
+
+    # - name: Check python
+    #   raw: test -e /usr/bin/python || (apt -y update && apt install -y python-minimal)
+    #   changed_when: false
+
+    - name: Get list of all users
+      shell: "getent passwd | awk -F: '$3 > 1000 {print $1}'"
+      changed_when: false
+      register: users
+
+    - name: Remove all users
+      user:
+        name: "{{ item }}"
+        state: absent
+        remove: yes
+      with_items: "{{ users.stdout_lines }}"
+      when: item not in default_users
+
+    - name: Load users from users.yaml
+      include_vars:
+        file: "{{ users_file }}"
+        name: users_data
+      # register: users_data
+
+    - name: Add required users
+      user:
+        name: "{{ item.user }}"
+        state: present
+      loop: "{{ users_data.users }}"
+
+    - name: Add SSH public keys
+      authorized_key:
+        user: "{{ item.user }}"
+        state: present
+        key: "{{ item.public_key }}"
+      loop: "{{ users_data.users }}"
+
+
